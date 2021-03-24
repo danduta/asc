@@ -9,7 +9,7 @@ PYTHON_CMD=python3
 rm -f ${TESTS}/*.out.sorted
 
 # Run tests
-for i in {1..9}
+for i in {8..9}
 do
    rm -f "${TESTS}/0$i".out
    echo "Starting test $i"

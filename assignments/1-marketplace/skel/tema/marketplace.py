@@ -6,6 +6,10 @@ Assignment 1
 March 2021
 """
 
+from queue import Empty, Full, Queue
+from threading import Condition, Event, Lock
+from .product import Product
+
 
 class Marketplace:
     """
@@ -19,15 +23,25 @@ class Marketplace:
         :type queue_size_per_producer: Int
         :param queue_size_per_producer: the maximum size of a queue associated with each producer
         """
-        pass
+        self.max_size = queue_size_per_producer
+        self.producers = {}
+        self.consumers = {}
+        self.products = {}
+        self.producers_lock = Lock()
+        self.products_lock = Lock()
+        self.finish = Event()
 
     def register_producer(self):
         """
         Returns an id for the producer that calls this.
         """
-        pass
+        with self.producers_lock:
+            id = len(self.producers)
+            self.producers[id] = Queue(self.max_size)
+        
+        return id
 
-    def publish(self, producer_id, product):
+    def publish(self, producer_id, product: Product):
         """
         Adds the product provided by the producer to the marketplace
 
@@ -39,7 +53,22 @@ class Marketplace:
 
         :returns True or False. If the caller receives False, it should wait and then try again.
         """
-        pass
+        with self.products_lock:
+            if product not in self.products:
+                # print('Adding {} to queue.'.format(product))
+                self.products[product] = Queue(999)
+
+        try:
+            self.products[product].put(product)
+            self.producers[producer_id].put(product, block=False)
+            # print('PRODUCE', product, ':', self.products[product].qsize())
+            # print(product, ':', self.producers[producer_id].qsize(), '.....', self.products[product].qsize())
+        except Full:
+            # print('FULL')
+            return False
+
+        return True
+
 
     def new_cart(self):
         """
@@ -47,7 +76,11 @@ class Marketplace:
 
         :returns an int representing the cart_id
         """
-        pass
+        with self.products_lock:
+            id = 'cons' + str(len(self.consumers) + 1)
+            self.consumers[id] = []
+        
+        return id
 
     def add_to_cart(self, cart_id, product):
         """
@@ -61,7 +94,21 @@ class Marketplace:
 
         :returns True or False. If the caller receives False, it should wait and then try again
         """
-        pass
+        with self.products_lock:
+            if product not in self.products:
+                # print('Adding {} to queue.'.format(product))
+                self.products[product] = Queue(999)
+
+        try:
+            self.products[product].get(block=False)
+            # print('ADD', product, ':', self.products[product].qsize())
+            with self.products_lock:
+                self.consumers[cart_id].append(product)
+        except Empty:
+            # print('Not enough of {}'.format(product))
+            return False
+
+        return True
 
     def remove_from_cart(self, cart_id, product):
         """
@@ -73,7 +120,18 @@ class Marketplace:
         :type product: Product
         :param product: the product to remove from cart
         """
-        pass
+        # print('{} trying to remove {}.'.format(cart_id, product))
+        with self.products_lock:
+            if product not in self.consumers[cart_id]:
+                return
+            self.consumers[cart_id].remove(product)
+            # print(cart_id, self.consumers[cart_id])
+
+        try:
+            self.products[product].put(product, block=False)
+        except Full:
+            # print('FULL REMOVE')
+            return
 
     def place_order(self, cart_id):
         """
@@ -82,4 +140,15 @@ class Marketplace:
         :type cart_id: Int
         :param cart_id: id cart
         """
-        pass
+        with self.products_lock:
+            order = self.consumers[cart_id].copy()
+            self.consumers[cart_id].clear()
+
+        return order
+
+    def mark_finish(self, cart_id):
+
+        with self.products_lock:
+            del self.consumers[cart_id]
+            if len(self.consumers) == 0:
+                self.finish.set()

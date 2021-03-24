@@ -7,6 +7,8 @@ March 2021
 """
 
 from threading import Thread
+from .marketplace import Marketplace
+from time import sleep
 
 
 class Producer(Thread):
@@ -14,7 +16,7 @@ class Producer(Thread):
     Class that represents a producer.
     """
 
-    def __init__(self, products, marketplace, republish_wait_time, **kwargs):
+    def __init__(self, products, marketplace : Marketplace, republish_wait_time, **kwargs):
         """
         Constructor.
 
@@ -31,7 +33,20 @@ class Producer(Thread):
         @type kwargs:
         @param kwargs: other arguments that are passed to the Thread's __init__()
         """
-        pass
+        Thread.__init__(self, kwargs=kwargs)
+        self.products = products
+        self.marketplace = marketplace
+        self.time = republish_wait_time
 
     def run(self):
-        pass
+        self.id = self.marketplace.register_producer()
+        while True:
+            if self.marketplace.finish.is_set():
+                break
+
+            for product in self.products:
+                if not self.marketplace.publish(self.id, product[0]):
+                    sleep(self.time)
+                else:
+                    sleep(product[2])
+                    # print('{} produced {}'.format(self.id, product[0]))
