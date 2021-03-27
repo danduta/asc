@@ -49,4 +49,3 @@ class Producer(Thread):
                     sleep(self.time)
                 else:
                     sleep(product[2])
-                    # print('{} produced {}'.format(self.id, product[0]))

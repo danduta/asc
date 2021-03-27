@@ -55,16 +55,12 @@ class Marketplace:
         """
         with self.products_lock:
             if product not in self.products:
-                # print('Adding {} to queue.'.format(product))
                 self.products[product] = Queue(999)
 
         try:
             self.products[product].put(product)
             self.producers[producer_id].put(product, block=False)
-            # print('PRODUCE', product, ':', self.products[product].qsize())
-            # print(product, ':', self.producers[producer_id].qsize(), '.....', self.products[product].qsize())
         except Full:
-            # print('FULL')
             return False
 
         return True
@@ -96,16 +92,13 @@ class Marketplace:
         """
         with self.products_lock:
             if product not in self.products:
-                # print('Adding {} to queue.'.format(product))
                 self.products[product] = Queue(999)
 
         try:
             self.products[product].get(block=False)
-            # print('ADD', product, ':', self.products[product].qsize())
             with self.products_lock:
                 self.consumers[cart_id].append(product)
         except Empty:
-            # print('Not enough of {}'.format(product))
             return False
 
         return True
@@ -125,12 +118,10 @@ class Marketplace:
             if product not in self.consumers[cart_id]:
                 return
             self.consumers[cart_id].remove(product)
-            # print(cart_id, self.consumers[cart_id])
 
         try:
             self.products[product].put(product, block=False)
         except Full:
-            # print('FULL REMOVE')
             return
 
     def place_order(self, cart_id):

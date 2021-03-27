@@ -41,7 +41,6 @@ class Consumer(Thread):
         self.id = self.marketplace.new_cart()
         for cart in self.carts:
             for operation in cart:
-                # print(self.id, operation)
                 if operation['type'] == 'add':
                     for _ in range(operation['quantity']):
                         while not self.marketplace.add_to_cart(self.id, operation['product']):
